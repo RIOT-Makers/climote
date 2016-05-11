@@ -1,0 +1,2 @@
+# climote
+Climate monitoring terminal
