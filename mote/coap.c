@@ -111,11 +111,11 @@ static int handle_put_led(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt,
 {
     if (inpkt->payload.len > 0) {
         if (inpkt->payload.p[0] == '1') {
+            puts("LED ON!");
             LED0_ON;
 #if (defined(LED1_ON) && defined(LED2_ON))
             LED1_ON;
             LED2_ON;
-            puts("LED ON!");
         }
         else if (inpkt->payload.p[0] == 'r') {
             LED0_TOGGLE;

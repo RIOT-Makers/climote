@@ -17,8 +17,6 @@
 #include "periph_conf.h"
 #include "thread.h"
 #include "xtimer.h"
-// own
-#include "sensor.h"
 
 #ifndef BOARD_SAMR21_XPRO
 #include "periph/adc.h"
@@ -34,8 +32,10 @@ static hdc1000_t dev_hdc1000;
 static tmp006_t dev_tmp006;
 #endif
 
+#include "sensor.h"
+
 #define SENSOR_MSG_QUEUE_SIZE   (8U)
-#define SENSOR_TIMEOUT_MS       (5000*1000) // 5s
+#define SENSOR_TIMEOUT_MS       (5000*1000)
 #define SENSOR_NUM_SAMPLES      (6U)
 #define SENSOR_THREAD_STACKSIZE (THREAD_STACKSIZE_DEFAULT)
 
@@ -76,6 +76,11 @@ int sensor_get_humidity(void)
     return avg;
 }
 
+/**
+ * @brief get avg air quality over N sampels in percent (%) with factor 100
+ *
+ * @return air quality
+ */
 int sensor_get_airquality(void)
 {
     int sum = 0;
@@ -105,7 +110,7 @@ static void sensor_hdc1000_measure(int *temp, int *hum) {
     hdc1000_read(&dev_hdc1000, &raw_temp, &raw_hum);
     hdc1000_convert(raw_temp, raw_hum,  temp, hum);
 }
-#endif
+#endif /* MODULE_HDC1000 */
 
 #ifdef MODULE_TMP006
 /**
@@ -127,7 +132,7 @@ static void sensor_tmp006_measure(int *temp)
     tmp006_convert(raw_volt, raw_temp,  &tamb, &tobj);
     *temp = (int)(tobj*100);
 }
-#endif
+#endif /* MODULE_TMP006 */
 
 #ifndef BOARD_SAMR21_XPRO
 /**
@@ -138,7 +143,7 @@ static void sensor_tmp006_measure(int *temp)
 static void sensor_mq135_measure(int *airq){
     *airq = adc_sample(ADC_LINE(0), ADC_RES_16BIT);
 }
-#endif
+#endif /* BOARD_SAMR21_XPRO */
 
 /**
  * @brief Intialise all sensores.
@@ -146,12 +151,6 @@ static void sensor_mq135_measure(int *airq){
  * @return 0 on success, anything else on error
  */
 static int sensor_init(void) {
-#ifdef MODULE_TMP006
-    assert(SENSOR_TIMEOUT_MS > TMP006_CONVERSION_TIME);
-#endif
-#ifdef MODULE_HDC1000
-    assert(SENSOR_TIMEOUT_MS > HDC1000_CONVERSION_TIME);
-#endif
 #ifndef BOARD_SAMR21_XPRO
     if (ADC_NUMOF < 1) {
         puts("ERROR: no ADC device found");
@@ -164,16 +163,18 @@ static int sensor_init(void) {
             return 1;
         }
     }
-#endif
+#endif /* BOARD_SAMR21_XPRO */
 #ifdef MODULE_HDC1000
+    assert(SENSOR_TIMEOUT_MS > HDC1000_CONVERSION_TIME);
     /* initialise humidity sensor hdc1000 */
     if (!(hdc1000_init(&dev_hdc1000,
                        HDC1000_I2C, HDC1000_I2C_ADDRESS) == 0)) {
         puts("ERROR: HDC1000 init");
         return 1;
     }
-#endif
+#endif /* MODULE_HDC1000 */
 #ifdef MODULE_TMP006
+    assert(SENSOR_TIMEOUT_MS > TMP006_CONVERSION_TIME);
     /* init temperature sensor tmp006 */
     if (!(tmp006_init(&dev_tmp006, TMP006_I2C,
                       TMP006_ADDR, TMP006_CONFIG_CR_DEF) == 0)) {
@@ -190,22 +191,27 @@ static int sensor_init(void) {
     }
     puts("SUCCESS: TMP006 init and test!");
     xtimer_usleep(TMP006_CONVERSION_TIME);
-#endif
+#endif /* MODULE_TMP006 */
     int h1 = 0;
     int t1 = 0;
     int t2 = 0;
     int a1 = 0;
 #ifndef BOARD_SAMR21_XPRO
     sensor_mq135_measure(&a1);
-#endif
+#else
+    (void)a1;
+#endif /* BOARD_SAMR21_XPRO */
 #ifdef MODULE_HDC1000
     sensor_hdc1000_measure(&t1,&h1);
 #else
     (void)t1;
-#endif
+    (void)h1;
+#endif /* MODULE_HDC1000 */
 #ifdef MODULE_TMP006
     sensor_tmp006_measure(&t2);
-#endif
+#else
+    (void)t2;
+#endif /* MODULE_TMP006 */
     for (int i=0; i<SENSOR_NUM_SAMPLES; i++) {
         samples_airquality[i] = a1;
         samples_humidity[i] = h1;
@@ -256,11 +262,11 @@ static void *sensor_thread(void *arg)
  */
 int sensor_start_thread(void)
 {
-    // init sensor
+    /* init sensors */
     if (sensor_init() != 0) {
         return -1;
     }
-    // start thread
+    /* start sensor thread for periodic measurements */
     return thread_create(sensor_thread_stack, sizeof(sensor_thread_stack),
                         THREAD_PRIORITY_MAIN, THREAD_CREATE_STACKTEST,
                         sensor_thread, NULL, "sensor_thread");
