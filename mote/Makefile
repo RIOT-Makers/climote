@@ -31,6 +31,7 @@ ifeq ($(BOARD),pba-d-01-kw2x)
 endif
 
 ifeq ($(BOARD),samr21-xpro)
+	CFLAGS_OPT = -O0 # temporary workaround, until PR #5464 is merged or solved
 	TMP006_I2C	?= I2C_0
 	TMP006_ADDR ?= 0x40
 	CFLAGS += -DTMP006_I2C=$(TMP006_I2C)
