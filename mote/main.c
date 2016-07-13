@@ -24,7 +24,7 @@
 // own
 #include "sensor.h"
 
-#define COMM_PAN           (0x2804) // lowpan ID
+#define COMM_PAN           (0x2409) // lowpan ID
 #define COMM_CHAN          (16U)  // channel
 
 int sensor_pid = -1;
