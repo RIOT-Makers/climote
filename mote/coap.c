@@ -38,6 +38,7 @@
 static char coap_thread_stack[COAP_THREAD_STACKSIZE];
 static msg_t coap_thread_msg_queue[COAP_MSG_QUEUE_SIZE];
 static char endpoints_response[COAP_REPSONSE_LENGTH];
+static char led = '0';
 
 static const coap_endpoint_path_t path_well_known_core = {2, {".well-known", "core"}};
 static const coap_endpoint_path_t path_airquality = {1, {"airquality"}};
@@ -105,6 +106,14 @@ static int handle_get_temperature(coap_rw_buffer_t *scratch, const coap_packet_t
 }
 
 /**
+ * @brief handle get temperature request
+ */
+static int handle_get_led(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt, coap_packet_t *outpkt, uint8_t id_hi, uint8_t id_lo)
+{
+    return coap_make_response(scratch, outpkt, (const uint8_t *)&led, 1, id_hi, id_lo, &inpkt->tok, COAP_RSPCODE_CONTENT, COAP_CONTENTTYPE_TEXT_PLAIN);
+}
+
+/**
  * @brief handle put led request
  */
 static int handle_put_led(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt, coap_packet_t *outpkt, uint8_t id_hi, uint8_t id_lo)
@@ -112,6 +121,7 @@ static int handle_put_led(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt,
     if (inpkt->payload.len > 0) {
         if (inpkt->payload.p[0] == '1') {
             puts("LED ON!");
+            led = '1';
             LED0_ON;
 #if (defined(LED1_ON) && defined(LED2_ON))
             LED1_ON;
@@ -137,12 +147,14 @@ static int handle_put_led(coap_rw_buffer_t *scratch, const coap_packet_t *inpkt,
             LED2_OFF;
 #endif
             puts("LED OFF!");
+            led = '0';
         }
         return coap_make_response(scratch, outpkt, NULL, 0, id_hi, id_lo, &inpkt->tok, COAP_RSPCODE_CHANGED, COAP_CONTENTTYPE_TEXT_PLAIN);
     }
     else {
         LED0_OFF;
         puts("LED OFF");
+        led = '0';
         return coap_make_response(scratch, outpkt, NULL, 0, id_hi, id_lo, &inpkt->tok, COAP_RSPCODE_BAD_REQUEST, COAP_CONTENTTYPE_TEXT_PLAIN);
     }
 }
@@ -153,6 +165,7 @@ const coap_endpoint_t endpoints[] =
     {COAP_METHOD_GET, handle_get_airquality, &path_airquality, "ct=0"},
     {COAP_METHOD_GET, handle_get_humidity, &path_humidity, "ct=0"},
     {COAP_METHOD_GET, handle_get_temperature, &path_temperature, "ct=0"},
+    {COAP_METHOD_GET, handle_get_led, &path_led, "ct=0"},
     {COAP_METHOD_PUT, handle_put_led, &path_led, NULL},
     {(coap_method_t)0, NULL, NULL, NULL}
 };
