@@ -77,6 +77,7 @@ int main(void)
     puts("========================================");
 
     // init 6lowpan interface
+    LED0_ON;
     puts(". init network");
     if (comm_init()!=0) {
         return 1;
@@ -88,11 +89,6 @@ int main(void)
     if (sensor_pid < 0) {
         return 1;
     }
-    LED0_OFF;
-#if (defined(LED1_ON) && defined(LED2_ON))
-    LED1_OFF;
-    LED2_OFF;
-#endif
     puts(":");
     // start coap receiver
     puts("... init coap");
@@ -103,6 +99,11 @@ int main(void)
     puts(".... init shell");
     puts(":");
     puts(":");
+    LED0_OFF;
+#if (defined(LED1_ON) && defined(LED2_ON))
+    LED1_OFF;
+    LED2_OFF;
+#endif
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
 
