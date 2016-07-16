@@ -7,8 +7,9 @@ import time
 # plot stuff
 import matplotlib as mpl
 mpl.use("agg")
-#mpl.use('MacOSX')
+mpl.use('MacOSX')
 import matplotlib.pyplot as plt
+plt.ion()
 import numpy
 from matplotlib.ticker import FormatStrFormatter
 from collections import deque
@@ -36,6 +37,27 @@ def main():
     if (max_samples < 1) or (max_samples < fig_samples):
         return
     pos = 0
+    # init figure
+    fig = plt.figure(figsize=(12,7))
+    # add temperature
+    ax = fig.add_subplot(311)
+    line1, =ax.plot(samples['temperature'])
+    ax.set_title('Sensor data')
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.set_ylabel('Temperature')
+    # add humidity
+    ay = fig.add_subplot(312)
+    line2, = ay.plot(samples['humidity'])
+    ay.set_ylabel('Humidity')
+    ay.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # add pollution
+    az = fig.add_subplot(313)
+    line3, = az.plot(samples['airquality'])
+    az.set_xlabel('samples [#]')
+    az.set_ylabel('Pollution')
+    az.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    # save figure
+    plt.draw()
     while True:
         req_temperature = Message(code=GET)
         req_humidity = Message(code=GET)
@@ -66,28 +88,16 @@ def main():
         # end try
         pos = (pos + 1) % fig_samples
         if pos == 0:
-            # init figure
-            fig = plt.figure(figsize=(12,7))
-            # add temperature
-            ax = fig.add_subplot(311)
-            ax.plot(samples['temperature'])
-            ax.set_title('Sensor data')
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            ax.set_ylabel('Temperature')
-            # add humidity
-            ay = fig.add_subplot(312)
-            ay.plot(samples['humidity'])
-            ay.set_ylabel('Humidity')
-            ay.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # add pollution
-            az = fig.add_subplot(313)
-            az.plot(samples['airquality'])
-            az.set_xlabel('samples [#]')
-            az.set_ylabel('Pollution')
-            az.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # save figure
-            plt.savefig('sensordata.png')
-            plt.close(fig)
+            line1.set_ydata(samples['temperature'])
+            ax.relim()
+            ax.autoscale_view()
+            line2.set_ydata(samples['humidity'])
+            ay.relim()
+            ay.autoscale_view()
+            line3.set_ydata(samples['airquality'])
+            az.relim()
+            az.autoscale_view()
+            plt.pause(0.1)
         time.sleep(0.5)
 
 if __name__ == "__main__":
