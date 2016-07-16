@@ -6,15 +6,17 @@ import asyncio
 import time
 # plot stuff
 import matplotlib as mpl
-mpl.use("agg")
+#mpl.use("agg")
+mpl.use('MacOSX')
 import matplotlib.pyplot as plt
+plt.ion()
 import numpy
 from matplotlib.ticker import FormatStrFormatter
 from collections import deque
 
 max_samples = 100
-fig_samples = 5
-sensor_ipv6 = "[fe80::f353:4e59:71ba:600a%lowpan0]"
+fig_samples = 2
+sensor_ipv6 = "[fd49:88e0:1ed6:2:7982:4d5e:5728:2002]"
 yFormatter = FormatStrFormatter('%.2f')
 app_samples = False
 
@@ -85,9 +87,10 @@ def main():
             az.set_ylabel('Pollution')
             az.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             # save figure
-            plt.savefig('sensordata.png')
-            plt.close(fig)
-        time.sleep(0.9)
+            #plt.savefig('sensordata.png')
+            plt.pause(0.01)
+            #plt.close(fig)
+        time.sleep(0.5)
 
 if __name__ == "__main__":
     asyncio.get_event_loop().run_until_complete(main())
