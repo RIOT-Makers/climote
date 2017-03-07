@@ -24,10 +24,11 @@ USEMODULE += shell_commands
 USEMODULE += ps
 USEMODULE += xtimer
 # Add sensor modules
-USEMODULE += tmp006
+
 
 ifeq ($(BOARD),pba-d-01-kw2x)
 	USEMODULE += hdc1000
+	USEMODULE += tmp006
 endif
 
 ifeq ($(BOARD),samr21-xpro)
