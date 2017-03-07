@@ -18,6 +18,7 @@
 // riot
 #include "board.h"
 #include "log.h"
+#include "msg.h"
 #include "net/gnrc/netapi.h"
 #include "net/gnrc/netif.h"
 #include "periph/gpio.h"
