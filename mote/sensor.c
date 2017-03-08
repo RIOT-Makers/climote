@@ -44,7 +44,6 @@ static int samples_humidity[SENSOR_NUM_SAMPLES];
 static int samples_temperature[SENSOR_NUM_SAMPLES];
 
 static char sensor_thread_stack[SENSOR_THREAD_STACKSIZE];
-static msg_t sensor_thread_msg_queue[SENSOR_MSG_QUEUE_SIZE];
 
 /**
  * @brief get avg temperature over N samples in Celcius (C) with factor 100
@@ -69,7 +68,7 @@ int sensor_get_temperature(void)
 int sensor_get_humidity(void)
 {
     int sum = 0;
-    for (int i=0; i < SENSOR_NUM_SAMPLES; i++) {
+    for (unsigned i = 0; i < SENSOR_NUM_SAMPLES; ++i) {
         sum += samples_humidity[i];
     }
     int avg = (sum/SENSOR_NUM_SAMPLES);
@@ -84,7 +83,7 @@ int sensor_get_humidity(void)
 int sensor_get_airquality(void)
 {
     int sum = 0;
-    for (int i=0; i < SENSOR_NUM_SAMPLES; i++) {
+    for (unsigned i = 0; i < SENSOR_NUM_SAMPLES; ++i) {
         sum += samples_airquality[i];
     }
     int avg = (sum/SENSOR_NUM_SAMPLES);
