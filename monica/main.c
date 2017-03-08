@@ -23,6 +23,8 @@
 #include "net/gnrc/netif.h"
 #include "periph/gpio.h"
 #include "shell.h"
+// own
+#include "monica.h"
 
 #ifndef BUTTON_MODE
 #define BUTTON_MODE     (GPIO_IN_PU)
@@ -102,33 +104,34 @@ int main(void)
     if (comm_init() != 0) {
         return 1;
     }
-    puts(".");
     // start sensor thread
     LOG_INFO(".. init sensors\n");
     if ((sensor_pid = sensor_init()) < 0) {
         return 1;
     }
-    puts(".");
     // start coap thread
     LOG_INFO(".. init coap\n");
     if((coap_pid = coap_init()) < 0) {
         return 1;
     }
-    puts(".");
     // start mqtt thread
     LOG_INFO(".. init mqtt\n");
     if((mqtt_pid = mqtt_init()) < 0) {
         return 1;
     }
-    puts(".");
+    // start mqtt thread
+    LOG_INFO(".. init button\n");
+    if(button_init() != 0) {
+        return 1;
+    }
     // start shell
-    LOG_INFO(".. init shell");
-    puts(".");
+    LOG_INFO(".. init shell\n");
     LED0_OFF;
 #if (defined(LED1_ON) && defined(LED2_ON))
     LED1_OFF;
     LED2_OFF;
 #endif
+    LOG_INFO("\n");
     char line_buf[SHELL_DEFAULT_BUFSIZE];
     shell_run(shell_commands, line_buf, SHELL_DEFAULT_BUFSIZE);
 

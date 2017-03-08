@@ -3,11 +3,11 @@
 
 #include "msg.h"
 
-#define SENS_MSG_QUEUE_SIZE     (8U)
-#define SENS_THREAD_STACKSIZE   (2 * THREAD_STACKSIZE_DEFAULT)
+#define SENS_MSG_QUEUE_SIZE     (4U)
+#define SENS_THREAD_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
 
 static char sensor_thread_stack[SENS_THREAD_STACKSIZE];
-static msg_t sensor_thread_msg_queue[SENS_MSG_QUEUE_SIZE];
+//static msg_t sensor_thread_msg_queue[SENS_MSG_QUEUE_SIZE];
 
 /**
  * @brief udp receiver thread function
@@ -17,6 +17,7 @@ static msg_t sensor_thread_msg_queue[SENS_MSG_QUEUE_SIZE];
 static void *sensor_thread(void *arg)
 {
     (void) arg;
+    return NULL;
 }
 
 /**

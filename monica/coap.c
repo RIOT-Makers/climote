@@ -2,13 +2,13 @@
 #include "thread.h"
 
 #include "msg.h"
-#include "net/gcoap.h"
+//#include "net/gcoap.h"
 
-#define COAP_MSG_QUEUE_SIZE     (8U)
-#define COAP_THREAD_STACKSIZE   (2 * THREAD_STACKSIZE_DEFAULT)
+#define COAP_MSG_QUEUE_SIZE     (4U)
+#define COAP_THREAD_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
 
 static char coap_thread_stack[COAP_THREAD_STACKSIZE];
-static msg_t coap_thread_msg_queue[COAP_MSG_QUEUE_SIZE];
+//static msg_t coap_thread_msg_queue[COAP_MSG_QUEUE_SIZE];
 
 /**
  * @brief udp receiver thread function
@@ -18,6 +18,7 @@ static msg_t coap_thread_msg_queue[COAP_MSG_QUEUE_SIZE];
 static void *coap_thread(void *arg)
 {
     (void) arg;
+    return NULL;
 }
 
 /**

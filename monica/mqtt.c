@@ -1,14 +1,36 @@
 #include "log.h"
 #include "thread.h"
-
 #include "msg.h"
 #include "net/emcute.h"
+// own
+#include "monica.h"
 
-#define MQTT_MSG_QUEUE_SIZE     (8U)
-#define MQTT_THREAD_STACKSIZE   (2 * THREAD_STACKSIZE_DEFAULT)
+#define MONICA_MQTT_PORT        (1885)
+#define MONICA_MQTT_ADDR        "fd17:cafe:cafe:3::1"
+#define MQTT_MSG_QUEUE_SIZE     (4U)
+#define MQTT_THREAD_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
 
 static char mqtt_thread_stack[MQTT_THREAD_STACKSIZE];
-static msg_t mqtt_thread_msg_queue[MQTT_MSG_QUEUE_SIZE];
+//static msg_t mqtt_thread_msg_queue[MQTT_MSG_QUEUE_SIZE];
+
+static int con(void)
+{
+    sock_udp_ep_t gw = { .family = AF_INET6, .port = MONICA_MQTT_PORT };
+    char  *will_top = NULL;
+    char  *will_msg = NULL;
+    size_t will_len = 0;
+    /* parse broker address */
+    if (ipv6_addr_from_str((ipv6_addr_t *)&gw.addr.ipv6, MONICA_MQTT_ADDR) == NULL) {
+        LOG_ERROR("[MQTT] failed to parse broker address!\n");
+        return 1;
+    }
+    /* connect to broker */
+    if (emcute_con(&gw, true, will_top, will_msg, will_len, 0) != EMCUTE_OK) {
+        LOG_ERROR("[MQTT] failed to connect with broker!\n");
+        return 1;
+    }
+    return 0;
+}
 
 /**
  * @brief udp receiver thread function
@@ -18,6 +40,14 @@ static msg_t mqtt_thread_msg_queue[MQTT_MSG_QUEUE_SIZE];
 static void *mqtt_thread(void *arg)
 {
     (void) arg;
+    if (con() != 0) {
+        return NULL;
+    }
+    while(1) {
+        msg_t msg;
+        msg_receive(&msg);
+    }
+    return NULL;
 }
 
 /**
