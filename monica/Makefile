@@ -1,11 +1,9 @@
 # name of your application
 APPLICATION = monica
 
-FEATURES_REQUIRED = periph_i2c
-
-BOARD_WHITELIST := pba-d-01-kw2x remote-revb
+BOARD_WHITELIST := native pba-d-01-kw2x remote-revb
 # If no BOARD is found in the environment, use this default:
-BOARD ?= pba-d-01-kw2x
+BOARD ?= native
 # This has to be the absolute path to the RIOT base directory:
 RIOTBASE ?= $(CURDIR)/../..
 
@@ -15,7 +13,7 @@ USEMODULE += emcute
 # Specify the mandatory networking modules
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_sock_udp
-sUSEMODULE += gcoap
+#USEMODULE += gcoap
 # Additional networking modules that can be dropped if not needed
 #USEMODULE += gnrc_icmpv6_echo
 # Required by gcoap example
@@ -23,11 +21,11 @@ sUSEMODULE += gcoap
 #USEMODULE += fmt
 # Add also the shell, some shell commands
 USEMODULE += shell
-#USEMODULE += shell_commands
+USEMODULE += shell_commands
 USEMODULE += ps
 USEMODULE += xtimer
 # packages
-USEPKG += nanocoap
+#USEPKG += nanocoap
 # Add sensor modules
 
 ifeq ($(BOARD),pba-d-01-kw2x)

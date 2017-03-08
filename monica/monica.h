@@ -6,6 +6,9 @@
 #define MONICA_MQTT_SIZE        (64U)
 #define MONICA_MQTT_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
 
+int sensor_get_temperature(void);
+int sensor_get_humidity(void);
+
 typedef struct monica_pub {
     char *topic;
     char *message;
