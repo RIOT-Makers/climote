@@ -13,19 +13,19 @@ USEMODULE += emcute
 # Specify the mandatory networking modules
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_sock_udp
-#USEMODULE += gcoap
+USEMODULE += gcoap
 # Additional networking modules that can be dropped if not needed
-#USEMODULE += gnrc_icmpv6_echo
+USEMODULE += gnrc_icmpv6_echo
 # Required by gcoap example
 #USEMODULE += od
 #USEMODULE += fmt
 # Add also the shell, some shell commands
 USEMODULE += shell
-USEMODULE += shell_commands
-USEMODULE += ps
+#USEMODULE += shell_commands
+#USEMODULE += ps
 USEMODULE += xtimer
 # packages
-#USEPKG += nanocoap
+USEPKG += nanocoap
 # Add sensor modules
 
 ifeq ($(BOARD),pba-d-01-kw2x)
@@ -37,6 +37,7 @@ endif
 # which is not needed in a production environment but helps in the
 # development process:
 CFLAGS += -DDEVELHELP
+CFLAGS += -DTHREAD_STACKSIZE_MAIN=2048
 
 # Change this to 0 show compiler invocation lines by default:
 QUIET ?= 1

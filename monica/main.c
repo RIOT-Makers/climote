@@ -19,6 +19,8 @@
 #include "board.h"
 #include "log.h"
 #include "msg.h"
+#include "net/af.h"
+#include "net/gnrc/ipv6.h"
 #include "net/gnrc/netapi.h"
 #include "net/gnrc/netif.h"
 #include "periph/gpio.h"
@@ -38,15 +40,17 @@
 #define COMM_PAN        (0x17) // lowpan ID
 #define COMM_CHAN       (17U)  // channel
 
-int sensor_pid = -1;
-int coap_pid = -1;
-int mqtt_pid = -1;
+static int sensor_pid = -1;
+static int mqtt_pid = -1;
+static int btn_pid = -1;
 
 extern int coap_init(void);
 extern int mqtt_init(void);
 extern int sensor_init(void);
 
 static int cmd_btn(int argc, char **argv);
+static char btn_thread_stack[MONICA_MQTT_STACKSIZE];
+msg_t btn_msg;
 
 // array with available shell commands
 static const shell_command_t shell_commands[] = {
@@ -54,45 +58,87 @@ static const shell_command_t shell_commands[] = {
     { NULL, NULL, NULL }
 };
 
-static void button_cb(void *arg)
+size_t node_get_info(char *buf)
 {
-    LOG_INFO("button_cb: external interrupt (%i)\n", *(int *)arg);
-    if (mqtt_pid > 0) {
-        msg_t mi, mt, mh;
-        char mmsg[MONICA_MQTT_SIZE];
-        /* publish riot info */
-        sprintf(mmsg, "board %s", RIOT_BOARD);
-        monica_pub_t mpt_info = { .topic = "monica/info", .message = mmsg };
-        mi.content.ptr = &mpt_info;
-        msg_send(&mi, mqtt_pid);
-        /* publish temperature */
-        memset(mmsg, 0, MONICA_MQTT_SIZE);
-        sprintf(mmsg, "temperature: %d", sensor_get_temperature());
-        monica_pub_t mpt_temp = { .topic = "monica/climate", .message = mmsg };
-        mt.content.ptr = &mpt_temp;
-        msg_send(&mt, mqtt_pid);
-        /* publish humidity */
-        memset(mmsg, 0, MONICA_MQTT_SIZE);
-        sprintf(mmsg, "humidity: %d", sensor_get_humidity());
-        monica_pub_t mpt_hum = { .topic = "monica/climate", .message = mmsg };
-        mh.content.ptr = &mpt_hum;
-        msg_send(&mh, mqtt_pid);
-    }
-    else {
-        // start mqtt thread
-        LOG_INFO(".. init mqtt\n");
-        if((mqtt_pid = mqtt_init()) < 0) {
-            return 1;
+    //size_t len = sprintf(buf, "{'board': '%s'", RIOT_BOARD);
+    size_t len = 0;
+    kernel_pid_t ifs[GNRC_NETIF_NUMOF];
+    size_t numof = gnrc_netif_get(ifs);
+    if (numof > 0) {
+        gnrc_ipv6_netif_t *entry = gnrc_ipv6_netif_get(ifs[0]);
+        char ipv6_addr_str[IPV6_ADDR_MAX_STR_LEN];
+        for (int i = 0; i < GNRC_IPV6_NETIF_ADDR_NUMOF; i++) {
+            if (ipv6_addr_is_global(&entry->addrs[i].addr) &&
+                    !ipv6_addr_is_multicast(&entry->addrs[i].addr) &&
+                    !(entry->addrs[i].flags & GNRC_IPV6_NETIF_ADDR_FLAGS_NON_UNICAST)) {
+                ipv6_addr_to_str(ipv6_addr_str, &entry->addrs[i].addr, IPV6_ADDR_MAX_STR_LEN);
+                //len += sprintf(buf+len, ", 'addr': '%s'", ipv6_addr_str);
+                len = sprintf(buf, "{'addr': '%s'}", ipv6_addr_str);
+                return len;
+            }
         }
     }
+    len += sprintf(buf+len, "}");
+    return len;
+}
+
+/**
+ * @brief udp receiver thread function
+ *
+ * @param[in] arg   unused
+ */
+static void *btn_thread(void *arg)
+{
+    (void) arg;
+    static msg_t msgq[4];
+    msg_init_queue(msgq, 4);
+
+    while(1) {
+        msg_t m;
+        msg_receive(&m);
+        if (mqtt_pid > 0) {
+            msg_t req, resp;
+            /* publish riot info */
+            char buf[MONICA_MQTT_SIZE];
+            memset(buf, 0, MONICA_MQTT_SIZE);
+            size_t len = node_get_info(buf);
+            (void) len;
+            monica_pub_t mpt_info = { .topic = "monica/info", .message = buf };
+            req.content.ptr = &mpt_info;
+            msg_send_receive(&req, &resp, mqtt_pid);
+            /* publish climate data */
+            memset(buf, 0, MONICA_MQTT_SIZE);
+            sprintf(buf, "{'temperature': %d, 'humidity': %d}", sensor_get_temperature(), sensor_get_humidity());
+            monica_pub_t mpt_climate = { .topic = "monica/climate", .message = buf };
+            req.content.ptr = &mpt_climate;
+            msg_send_receive(&req, &resp, mqtt_pid);
+        }
+        else {
+            // start mqtt thread
+            LOG_INFO(".. init mqtt.\n");
+            if((mqtt_pid = mqtt_init()) < 0) {
+                LOG_ERROR("!! init mqtt failed !!\n");
+            }
+        }
+    }
+    return NULL;
+}
+static void button_cb(void *arg)
+{
+    (void) arg;
+    LOG_INFO("button_cb: external interrupt.\n");
+    msg_t *msg = (msg_t*)arg;
+    msg_send_int(msg, btn_pid);
 }
 
 static int button_init(void)
 {
     LOG_DEBUG("button_init: enter\n");
+    btn_pid = thread_create(btn_thread_stack, sizeof(btn_thread_stack),
+                            THREAD_PRIORITY_MAIN, THREAD_CREATE_STACKTEST,
+                            btn_thread, NULL, "btn_thread");
 #ifndef BOARD_NATIVE
-    int pi = 314;
-    if (gpio_init_int(BUTTON_GPIO, GPIO_IN, GPIO_FALLING, button_cb, (void *)pi) < 0) {
+    if (gpio_init_int(BUTTON_GPIO, BUTTON_MODE, GPIO_FALLING, button_cb, (void *)&btn_msg) < 0) {
         LOG_ERROR("button_init: failed!\n");
         return 1;
     }
@@ -121,8 +167,7 @@ int cmd_btn(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
-    int test = 24911;
-    button_cb(&test);
+    msg_send(&btn_msg, btn_pid);
     return 0;
 }
 /**
@@ -148,7 +193,7 @@ int main(void)
     }
     // start coap thread
     LOG_INFO(".. init coap\n");
-    if((coap_pid = coap_init()) < 0) {
+    if(coap_init() < 0) {
         return 1;
     }
     // init button

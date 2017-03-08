@@ -1,23 +1,51 @@
 #include "log.h"
 #include "msg.h"
 #include "thread.h"
-//#include "net/gcoap.h"
+#include "net/gcoap.h"
 // own
 #include "monica.h"
 
-#define COAP_THREAD_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
+static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len);
+static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len);
 
-static char coap_thread_stack[COAP_THREAD_STACKSIZE];
+/* CoAP resources */
+static const coap_resource_t _resources[] = {
+    { "/monica/climate", COAP_GET, _climate_handler },
+    { "/monica/info", COAP_GET, _info_handler },
+};
 
-/**
- * @brief udp receiver thread function
- *
- * @param[in] arg   unused
+static gcoap_listener_t _listener = {
+    (coap_resource_t *)&_resources[0],
+    sizeof(_resources) / sizeof(_resources[0]),
+    NULL
+};
+
+/*
+ * Server callback for /cli/stats. Returns the count of packets sent by the
+ * CLI.
  */
-static void *coap_thread(void *arg)
+static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
 {
-    (void) arg;
-    return NULL;
+    LOG_INFO("[CoAP] info_handler\n");
+    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+
+    size_t payload_len = node_get_info((char *)pdu->payload);
+    
+    return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
+}
+
+/*
+ * Server callback for /cli/stats. Returns the count of packets sent by the
+ * CLI.
+ */
+static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
+{
+    LOG_INFO("[CoAP] climate_handler\n");
+    gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
+
+    size_t payload_len = sprintf((char *)pdu->payload, "{'temperature': %d, 'humidity': %d}", sensor_get_temperature(), sensor_get_humidity());
+
+    return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
 }
 
 /**
@@ -27,8 +55,6 @@ static void *coap_thread(void *arg)
  */
 int coap_init(void)
 {
-    // start thread
-    return thread_create(coap_thread_stack, sizeof(coap_thread_stack),
-                         THREAD_PRIORITY_MAIN-2, THREAD_CREATE_STACKTEST,
-                         coap_thread, NULL, "coap_thread");
+    gcoap_register_listener(&_listener);
+    return 0;
 }

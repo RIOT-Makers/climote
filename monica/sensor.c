@@ -35,9 +35,9 @@ static tmp006_t dev_tmp006;
 #include "random.h"
 #endif
 
-#define SENSOR_TIMEOUT_MS       (1 * US_PER_SEC)
+#define SENSOR_TIMEOUT_MS       (5000 * 1000)
 #define SENSOR_NUM_SAMPLES      (10U)
-#define SENSOR_THREAD_STACKSIZE (2 * THREAD_STACKSIZE_DEFAULT)
+#define SENSOR_THREAD_STACKSIZE (3 * THREAD_STACKSIZE_DEFAULT)
 
 static int samples_humidity[SENSOR_NUM_SAMPLES];
 static int samples_temperature[SENSOR_NUM_SAMPLES];
@@ -214,6 +214,6 @@ int sensor_init(void)
     }
     /* start sensor thread for periodic measurements */
     return thread_create(sensor_thread_stack, sizeof(sensor_thread_stack),
-                        THREAD_PRIORITY_MAIN-3, THREAD_CREATE_STACKTEST,
+                        THREAD_PRIORITY_MAIN-1, THREAD_CREATE_STACKTEST,
                         sensor_thread, NULL, "sensor_thread");
 }

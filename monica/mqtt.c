@@ -6,27 +6,30 @@
 // own
 #include "monica.h"
 
+#define EMCUTE_PORT         (1883U)
+#define EMCUTE_ID           ("eve")
+#define EMCUTE_PRIO         (THREAD_PRIORITY_MAIN - 1)
+
+static char stack[THREAD_STACKSIZE_DEFAULT];
 static char mqtt_thread_stack[MONICA_MQTT_STACKSIZE];
+static int emcute_pid = -1;
 
 static int _con(void)
 {
-    LOG_INFO("[MQTT] try connect to broker ... ");
+    LOG_DEBUG("[MQTT] try connect to broker ...\n");
     sock_udp_ep_t gw = { .family = AF_INET6, .port = MONICA_MQTT_PORT };
-    char *addr = MONICA_MQTT_ADDR;
-    char  *will_top = NULL;
-    char  *will_msg = NULL;
-    size_t will_len = 0;
+    char *addr = "fd17:cafe:cafe:3::1";
     /* parse broker address */
     if (ipv6_addr_from_str((ipv6_addr_t *)&gw.addr.ipv6, addr) == NULL) {
-        LOG_ERROR("failed to parse broker address!\n");
+        LOG_ERROR("[MQTT] failed to parse broker address!\n");
         return 1;
     }
     /* connect to broker */
-    if (emcute_con(&gw, true, will_top, will_msg, will_len, 0) != EMCUTE_OK) {
-        LOG_ERROR("failed!\n");
+    if (emcute_con(&gw, true, NULL, NULL, 0, 0) != EMCUTE_OK) {
+        LOG_ERROR("[MQTT] failed to connect to broker!\n");
         return 1;
     }
-    LOG_INFO("success.\n");
+    LOG_DEBUG(" ... successs.\n");
     return 0;
 }
 
@@ -35,6 +38,7 @@ static int _pub(monica_pub_t *mpt)
     emcute_topic_t t;
     unsigned flags = EMCUTE_QOS_0;
     /* get topic id */
+    LOG_DEBUG("[MQTT] pub (%s,%s)\n", mpt->topic, mpt->message);
     t.name = mpt->topic;
     if (emcute_reg(&t) != EMCUTE_OK) {
         LOG_ERROR("[MQTT] pub: unable to obtain topic ID");
@@ -50,6 +54,13 @@ static int _pub(monica_pub_t *mpt)
     return 0;
 }
 
+static void *emcute_thread(void *arg)
+{
+    (void)arg;
+    emcute_run(EMCUTE_PORT, EMCUTE_ID);
+    return NULL;    /* should never be reached */
+}
+
 /**
  * @brief udp receiver thread function
  *
@@ -58,13 +69,12 @@ static int _pub(monica_pub_t *mpt)
 static void *mqtt_thread(void *arg)
 {
     (void) arg;
-    if (_con() != 0) {
-        return NULL;
-    }
+
     while(1) {
-        msg_t msg;
-        msg_receive(&msg);
-        _pub(msg.content.ptr);
+        msg_t req, resp;
+        msg_receive(&req);
+        _pub((monica_pub_t *)req.content.ptr);
+        msg_reply(&req,&resp);
     }
     return NULL;
 }
@@ -76,6 +86,13 @@ static void *mqtt_thread(void *arg)
  */
 int mqtt_init(void)
 {
+    /* start the emcute thread */
+    if (emcute_pid < 0) {
+        emcute_pid = thread_create(stack, sizeof(stack), EMCUTE_PRIO, 0, emcute_thread, NULL, "emcute");
+    }
+    if (_con() != 0) {
+        return -1;
+    }
     // start thread
     return thread_create(mqtt_thread_stack, sizeof(mqtt_thread_stack),
                          THREAD_PRIORITY_MAIN-1, THREAD_CREATE_STACKTEST,
