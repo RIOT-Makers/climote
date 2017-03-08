@@ -15,7 +15,7 @@ USEMODULE += emcute
 # Specify the mandatory networking modules
 USEMODULE += gnrc_ipv6_default
 USEMODULE += gnrc_sock_udp
-#USEMODULE += gcoap
+sUSEMODULE += gcoap
 # Additional networking modules that can be dropped if not needed
 #USEMODULE += gnrc_icmpv6_echo
 # Required by gcoap example
@@ -27,7 +27,7 @@ USEMODULE += shell
 USEMODULE += ps
 USEMODULE += xtimer
 # packages
-#USEPKG += nanocoap
+USEPKG += nanocoap
 # Add sensor modules
 
 ifeq ($(BOARD),pba-d-01-kw2x)
