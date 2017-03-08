@@ -1,19 +1,14 @@
 #include "log.h"
-#include "thread.h"
 #include "msg.h"
 #include "net/emcute.h"
+#include "net/ipv6/addr.h"
+#include "thread.h"
 // own
 #include "monica.h"
 
-#define MONICA_MQTT_PORT        (1885)
-#define MONICA_MQTT_ADDR        "fd17:cafe:cafe:3::1"
-#define MQTT_MSG_QUEUE_SIZE     (4U)
-#define MQTT_THREAD_STACKSIZE   (THREAD_STACKSIZE_DEFAULT)
+static char mqtt_thread_stack[MONICA_MQTT_STACKSIZE];
 
-static char mqtt_thread_stack[MQTT_THREAD_STACKSIZE];
-//static msg_t mqtt_thread_msg_queue[MQTT_MSG_QUEUE_SIZE];
-
-static int con(void)
+static int _con(void)
 {
     sock_udp_ep_t gw = { .family = AF_INET6, .port = MONICA_MQTT_PORT };
     char  *will_top = NULL;
@@ -21,12 +16,31 @@ static int con(void)
     size_t will_len = 0;
     /* parse broker address */
     if (ipv6_addr_from_str((ipv6_addr_t *)&gw.addr.ipv6, MONICA_MQTT_ADDR) == NULL) {
-        LOG_ERROR("[MQTT] failed to parse broker address!\n");
+        LOG_ERROR("[MQTT] con: failed to parse broker address!\n");
         return 1;
     }
     /* connect to broker */
     if (emcute_con(&gw, true, will_top, will_msg, will_len, 0) != EMCUTE_OK) {
-        LOG_ERROR("[MQTT] failed to connect with broker!\n");
+        LOG_ERROR("[MQTT] con: failed to connect with broker!\n");
+        return 1;
+    }
+    return 0;
+}
+
+static int _pub(monica_pub_t *mpt)
+{
+    emcute_topic_t t;
+    unsigned flags = EMCUTE_QOS_0;
+    /* get topic id */
+    t.name = mpt->topic;
+    if (emcute_reg(&t) != EMCUTE_OK) {
+        LOG_ERROR("[MQTT] pub: unable to obtain topic ID");
+        return 1;
+    }
+    /* publish data */
+    if (emcute_pub(&t, mpt->message, strlen(mpt->message), flags) != EMCUTE_OK) {
+        LOG_ERROR("[MQTT] pub: unable to publish data to topic '%s [%i]'\n",
+                  t.name, (int)t.id);
         return 1;
     }
     return 0;
@@ -40,12 +54,13 @@ static int con(void)
 static void *mqtt_thread(void *arg)
 {
     (void) arg;
-    if (con() != 0) {
+    if (_con() != 0) {
         return NULL;
     }
     while(1) {
         msg_t msg;
         msg_receive(&msg);
+        _pub(msg.content.ptr);
     }
     return NULL;
 }

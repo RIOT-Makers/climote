@@ -46,15 +46,25 @@ extern int sensor_init(void);
 extern int coap_init(void);
 extern int mqtt_init(void);
 
+static int cmd_btn(int argc, char **argv);
+
 // array with available shell commands
 static const shell_command_t shell_commands[] = {
-//    { "get", "get sensor", cmd_get },
+    { "btn", "soft trigger button", cmd_btn },
     { NULL, NULL, NULL }
 };
 
 static void button_cb(void *arg)
 {
     LOG_INFO("button_cb: external interrupt (%i)\n", (int)arg);
+    msg_t m;
+    char mmsg[MONICA_MQTT_SIZE];
+    sprintf(mmsg, "This is RIOT on board %s", RIOT_BOARD);
+    monica_pub_t mpt = { .topic = "monica/info", .message = mmsg };
+    m.content.ptr = &mpt;
+    msg_send(&m, mqtt_pid);
+#ifdef BOARD_PBA_D_01_KW2X
+#endif /* BOARD_PBA_D_01_KW2X */
 }
 
 static int button_init(void)
@@ -85,6 +95,11 @@ static int comm_init(void)
     return 0;
 }
 
+int cmd_btn(int argc, char **argv)
+{
+    button_cb(NULL);
+    return 0;
+}
 /**
  * @brief the main programm loop
  *
@@ -93,11 +108,8 @@ static int comm_init(void)
 int main(void)
 {
     // some initial infos
-    puts(" CliMoTe - Climate Monitoring Terminal! ");
-    puts("========================================");
-    printf("You are running RIOT on a(n) %s board.\n", RIOT_BOARD);
-    printf("This board features a(n) %s MCU.\n", RIOT_MCU);
-    puts("========================================");
+    puts(" MONICA RIOT Demo - showing CoAP and MQTT ");
+    puts("==========================================\n");
     // init 6lowpan interface
     LED0_ON;
     LOG_INFO(".. init network\n");
