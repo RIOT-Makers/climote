@@ -26,11 +26,11 @@ static gcoap_listener_t _listener = {
  */
 static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
 {
-    LOG_INFO("[CoAP] info_handler\n");
+    LOG_DEBUG("[CoAP] info_handler\n");
     gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
 
     size_t payload_len = node_get_info((char *)pdu->payload);
-    
+
     return gcoap_finish(pdu, payload_len, COAP_FORMAT_JSON);
 }
 
@@ -40,7 +40,7 @@ static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
  */
 static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
 {
-    LOG_INFO("[CoAP] climate_handler\n");
+    LOG_DEBUG("[CoAP] climate_handler\n");
     gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
 
     size_t payload_len = sprintf((char *)pdu->payload, "{'temperature': %d, 'humidity': %d}", sensor_get_temperature(), sensor_get_humidity());

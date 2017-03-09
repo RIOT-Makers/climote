@@ -87,6 +87,7 @@ int sensor_get_humidity(void)
  * @param[out] hum the measured humitity in % * 100
  */
 static void _hdc1000_measure(int *temp, int *hum) {
+    LOG_DEBUG("[SENSOR] _hdc1000_measure\n");
     hdc1000_read(&dev_hdc1000, (int16_t *)temp, (int16_t *)hum);
 }
 #endif /* MODULE_HDC1000 */
@@ -99,10 +100,10 @@ static void _hdc1000_measure(int *temp, int *hum) {
  */
 static void _tmp006_measure(int *temp)
 {
+    LOG_DEBUG("[SENSOR] _tmp006_measure\n");
     uint8_t drdy;
     int16_t raw_temp, raw_volt;
     float tamb, tobj;
-
     /* read sensor, quit on error */
     if (tmp006_read(&dev_tmp006, &raw_volt, &raw_temp, &drdy)) {
         LOG_ERROR("[SENSOR] tmp006_measure\n");
@@ -119,6 +120,7 @@ static void _tmp006_measure(int *temp)
  * @return 0 on success, anything else on error
  */
 static int _init(void) {
+    LOG_DEBUG("[SENSOR] _init\n");
 #ifdef MODULE_HDC1000
     assert(SENSOR_TIMEOUT_MS > HDC1000_CONVERSION_TIME);
     /* initialise humidity sensor hdc1000 */

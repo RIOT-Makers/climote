@@ -35,10 +35,10 @@ static int _con(void)
 
 static int _pub(monica_pub_t *mpt)
 {
+    LOG_DEBUG("[MQTT] pub (%s,%s)\n", mpt->topic, mpt->message);
     emcute_topic_t t;
     unsigned flags = EMCUTE_QOS_0;
     /* get topic id */
-    LOG_DEBUG("[MQTT] pub (%s,%s)\n", mpt->topic, mpt->message);
     t.name = mpt->topic;
     if (emcute_reg(&t) != EMCUTE_OK) {
         LOG_ERROR("[MQTT] pub: unable to obtain topic ID");

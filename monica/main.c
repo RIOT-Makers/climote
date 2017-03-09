@@ -60,7 +60,6 @@ static const shell_command_t shell_commands[] = {
 
 size_t node_get_info(char *buf)
 {
-    //size_t len = sprintf(buf, "{'board': '%s'", RIOT_BOARD);
     size_t len = 0;
     kernel_pid_t ifs[GNRC_NETIF_NUMOF];
     size_t numof = gnrc_netif_get(ifs);
@@ -74,16 +73,15 @@ size_t node_get_info(char *buf)
                 ipv6_addr_to_str(ipv6_addr_str, &entry->addrs[i].addr, IPV6_ADDR_MAX_STR_LEN);
                 //len += sprintf(buf+len, ", 'addr': '%s'", ipv6_addr_str);
                 len = sprintf(buf, "{'addr': '%s'}", ipv6_addr_str);
-                return len;
+                break;
             }
         }
     }
-    len += sprintf(buf+len, "}");
     return len;
 }
 
 /**
- * @brief udp receiver thread function
+ * @brief processing button press
  *
  * @param[in] arg   unused
  */
@@ -123,23 +121,25 @@ static void *btn_thread(void *arg)
     }
     return NULL;
 }
+
+#ifndef BOARD_NATIVE
 static void button_cb(void *arg)
 {
+    LOG_DEBUG("[BTN] button_cb: interrupt.\n");
     (void) arg;
-    LOG_INFO("button_cb: external interrupt.\n");
     msg_t *msg = (msg_t*)arg;
     msg_send_int(msg, btn_pid);
 }
+#endif /* BOARD_NATIVE */
 
 static int button_init(void)
 {
-    LOG_DEBUG("button_init: enter\n");
     btn_pid = thread_create(btn_thread_stack, sizeof(btn_thread_stack),
                             THREAD_PRIORITY_MAIN, THREAD_CREATE_STACKTEST,
                             btn_thread, NULL, "btn_thread");
 #ifndef BOARD_NATIVE
     if (gpio_init_int(BUTTON_GPIO, BUTTON_MODE, GPIO_FALLING, button_cb, (void *)&btn_msg) < 0) {
-        LOG_ERROR("button_init: failed!\n");
+        LOG_ERROR("[BTN] !! failed to init button GPIO !!\n");
         return 1;
     }
 #endif /* BOARD_NATIVE */
@@ -148,13 +148,12 @@ static int button_init(void)
 
 static int comm_init(void)
 {
-    LOG_DEBUG("comm_init: enter\n");
     kernel_pid_t ifs[GNRC_NETIF_NUMOF];
     uint16_t pan = COMM_PAN;
     uint16_t chan = COMM_CHAN;
     /* get the PID of the first radio */
     if (gnrc_netif_get(ifs) <= 0) {
-        LOG_ERROR("comm_init: not radio found!\n");
+        LOG_ERROR("!! comm_init failed, not radio found !!\n");
         return 1;
     }
     /* initialize the radio */
@@ -167,9 +166,11 @@ int cmd_btn(int argc, char **argv)
 {
     (void) argc;
     (void) argv;
-    msg_send(&btn_msg, btn_pid);
+    msg_t *msg = (msg_t*)&btn_msg;
+    msg_send(msg, btn_pid);
     return 0;
 }
+
 /**
  * @brief the main programm loop
  *
