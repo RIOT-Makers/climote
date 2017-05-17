@@ -113,9 +113,12 @@ int main(void)
         char strbuf[8];
         int t = sensor_get_temperature();
         int h = sensor_get_humidity();
+        printf("T: %d, H: %d\n", t,h);
         sprintf(strbuf, "%d", t);
+        puts("> post temperature");
         post_sensordata(strbuf, LGV_PATH_TEMPERATURE);
         sprintf(strbuf, "%d", h);
+        puts("> post humidity");
         post_sensordata(strbuf, LGV_PATH_HUMITIDY);
         xtimer_usleep(LGV_LOOP_WAIT);
     }
