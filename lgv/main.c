@@ -112,16 +112,19 @@ int main(void)
     while(1) {
         char strbuf[32];
         int t = sensor_get_temperature();
-        int h = sensor_get_humidity();
-        printf("T: %d, H: %d\n", t,h);
+        //int h = sensor_get_humidity();
+        //printf("T: %d, H: %d\n", t,h);
+        printf("T: %d\n", t);
         memset(strbuf, '\0', 32);
         sprintf(strbuf, "{\"result\":%d}", t);
         puts("> post temperature");
         post_sensordata(strbuf, LGV_PATH_TEMPERATURE);
+        /*
         memset(strbuf, '\0', 32);
         sprintf(strbuf, "{\"result\":%d}", h);
         puts("> post humidity");
         post_sensordata(strbuf, LGV_PATH_HUMITIDY);
+        */
         xtimer_usleep(LGV_LOOP_WAIT);
     }
     // should be never reached
