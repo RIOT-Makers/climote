@@ -1,7 +1,7 @@
 # name of your application
-APPLICATION = monica-demo
+APPLICATION = lgv-demo
 
-BOARD_WHITELIST := native pba-d-01-kw2x remote-revb
+BOARD_WHITELIST := native pba-d-01-kw2x
 # If no BOARD is found in the environment, use this default:
 BOARD ?= native
 # This has to be the absolute path to the RIOT base directory:
@@ -16,6 +16,7 @@ USEMODULE += gnrc_sock_udp
 USEMODULE += gcoap
 USEMODULE += shell
 USEMODULE += xtimer
+USEMODULE += od
 # optional modules, e.g. for debugging
 USEMODULE += gnrc_icmpv6_echo
 #USEMODULE += shell_commands
