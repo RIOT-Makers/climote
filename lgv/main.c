@@ -110,13 +110,15 @@ int main(void)
 #endif
     LOG_INFO("\n");
     while(1) {
-        char strbuf[8];
+        char strbuf[32];
         int t = sensor_get_temperature();
         int h = sensor_get_humidity();
         printf("T: %d, H: %d\n", t,h);
+        memset(strbuf, '\0', 32);
         sprintf(strbuf, "{\"result\":%d}", t);
         puts("> post temperature");
         post_sensordata(strbuf, LGV_PATH_TEMPERATURE);
+        memset(strbuf, '\0', 32);
         sprintf(strbuf, "{\"result\":%d}", h);
         puts("> post humidity");
         post_sensordata(strbuf, LGV_PATH_HUMITIDY);
