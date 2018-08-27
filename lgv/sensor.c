@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #include "board.h"
 #include "periph_conf.h"
 #include "log.h"
@@ -28,12 +29,15 @@ static hdc1000_t dev_hdc1000;
 
 #ifdef MODULE_TMP006
 #include "tmp006.h"
+#include "tmp006_params.h"
 static tmp006_t dev_tmp006;
 #endif
 
 #if !defined(MODULE_HDC1000) || !defined(MODULE_TMP006)
 #include "random.h"
 #endif
+
+#include "config.h"
 
 #define SENSOR_TIMEOUT_MS       (5 * US_PER_SEC)
 #define SENSOR_NUM_SAMPLES      (10U)
@@ -103,22 +107,18 @@ static int16_t _get_humidity(void) {
 static int16_t _get_temperature(void)
 {
     LOG_DEBUG("[SENSOR] _get_temperature\n");
-    int16_t t;
+
 #ifdef MODULE_TMP006
-    uint8_t drdy;
-    int16_t raw_temp, raw_volt;
-    float tamb, tobj;
+    int16_t ta, to;
     /* read sensor, quit on error */
-    if (tmp006_read(&dev_tmp006, &raw_volt, &raw_temp, &drdy)) {
+    if (tmp006_read_temperature(&dev_tmp006, &ta, &to)) {
         LOG_ERROR("[SENSOR] tmp006_read failed\n");
         return 0;
     }
-    tmp006_convert(raw_volt, raw_temp,  &tamb, &tobj);
-    t = (int16_t)(tobj*100);
 #else
-    t = (int16_t) random_uint32_range(0, 5000);
+    int16_t to = (int16_t) random_uint32_range(0, 5000);
 #endif /* MODULE_TMP006 */
-    return t;
+    return to;
 }
 
 /**
@@ -137,7 +137,7 @@ static int _init(void) {
 #endif /* MODULE_HDC1000 */
 #ifdef MODULE_TMP006
     /* init temperature sensor tmp006 */
-    if ((tmp006_init(&dev_tmp006, TMP006_I2C, TMP006_ADDR, TMP006_CONFIG_CR_DEF) != 0)) {
+    if ((tmp006_init(&dev_tmp006, &tmp006_params[0]) != 0)) {
         LOG_ERROR("[SENSOR] TMP006 init");
         return 1;
     }
@@ -145,13 +145,10 @@ static int _init(void) {
         LOG_ERROR("[SENSOR] TMP006 activate.");
         return 1;
     }
-    if (tmp006_test(&dev_tmp006)) {
-        LOG_ERROR("[SENSOR] TMP006 test.");
-        return 1;
-    }
 #endif /* MODULE_TMP006 */
     mutex_lock(&mutex);
     for (unsigned i = 0; i < SENSOR_NUM_SAMPLES; i++) {
+        xtimer_sleep(1);
         samples_humidity[i]    = _get_humidity();
         samples_temperature[i] = _get_temperature();
     }
@@ -167,7 +164,7 @@ static int _init(void) {
 static void *sensor_thread(void *arg)
 {
     (void) arg;
-    int count = 0;
+    unsigned count = 0;
     xtimer_usleep(SENSOR_TIMEOUT_MS);
     while(1) {
         /* get latest sensor data */
@@ -176,7 +173,7 @@ static void *sensor_thread(void *arg)
         samples_humidity[count] = _get_humidity();
         mutex_unlock(&mutex);
         /* next round */
-        count = (count+1)%SENSOR_NUM_SAMPLES;
+        count = (count + 1) % SENSOR_NUM_SAMPLES;
         if (count == 0) {
             LOG_INFO("[SENSOR] raw data T: %d, H: %d\n",
                      sensor_get_temperature(), sensor_get_humidity());

@@ -6,25 +6,16 @@
 // own
 #include "config.h"
 
-static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len);
-static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len);
-/*
-enum {
-    COAP_METHOD_NONE,
-    COAP_METHOD_GET,
-    COAP_METHOD_POST,
-    COAP_METHOD_PUT,
-    COAP_METHOD_DELETE
-}
-*/
+static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
+static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx);
 
 /* Counts requests sent by CLI. */
 static uint16_t req_count = 0;
 
 /* CoAP resources */
 static const coap_resource_t _resources[] = {
-    { "/lgv/climate", COAP_GET, _climate_handler },
-    { "/lgv/info", COAP_GET, _info_handler },
+    { "/lgv/climate", COAP_GET, _climate_handler, NULL },
+    { "/lgv/info", COAP_GET, _info_handler, NULL },
 };
 
 static gcoap_listener_t _listener = {
@@ -36,8 +27,11 @@ static gcoap_listener_t _listener = {
 /*
  * Response callback.
  */
-static void _resp_handler(unsigned req_state, coap_pkt_t* pdu)
+static void _resp_handler(unsigned req_state, coap_pkt_t* pdu,
+                          sock_udp_ep_t *remote)
 {
+    (void)remote;       /* not interested in the source currently */
+
     if (req_state == GCOAP_MEMO_TIMEOUT) {
         printf("gcoap: timeout for msg ID %02u\n", coap_get_id(pdu));
         return;
@@ -105,8 +99,10 @@ static size_t _send(uint8_t *buf, size_t len, char *addr_str, char *port_str)
  * Server callback for /cli/stats. Returns the count of packets sent by the
  * CLI.
  */
-static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
+static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx)
 {
+    (void)ctx;
+
     LOG_DEBUG("[CoAP] info_handler\n");
     gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
 
@@ -119,8 +115,10 @@ static ssize_t _info_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
  * Server callback for /cli/stats. Returns the count of packets sent by the
  * CLI.
  */
-static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len)
+static ssize_t _climate_handler(coap_pkt_t* pdu, uint8_t *buf, size_t len, void *ctx)
 {
+    (void)ctx;
+
     LOG_DEBUG("[CoAP] climate_handler\n");
     gcoap_resp_init(pdu, buf, len, COAP_CODE_CONTENT);
 
@@ -138,7 +136,7 @@ void post_sensordata(char *data, char *path)
     gcoap_req_init(&pdu, &buf[0], GCOAP_PDU_BUF_SIZE, COAP_METHOD_POST, path);
     memcpy(pdu.payload, data, strlen(data));
     len = gcoap_finish(&pdu, strlen(data), COAP_FORMAT_JSON);
-    if (!_send(&buf[0], len, LGV_PROXY_ADDR, LGV_PROXY_PORT)) {
+    if (!_send(&buf[0], len, CONFIG_PROXY_ADDR, CONFIG_PROXY_PORT)) {
         puts("gcoap_cli: msg send failed");
     }
 }
